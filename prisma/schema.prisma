@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Group {
+  id         Int       @id @default(autoincrement())
+  telegramId BigInt    @unique
+  name       String
+  createdAt  DateTime  @default(now())
+
+  mentions   Mention[]
+}
+
+model Member {
+  id            Int            @id @default(autoincrement()) // internal DB PK
+  telegramId    BigInt?        @unique                      // optional, agar available ho
+  username      String?        @unique                      // optional, agar sirf @username mila
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  mentions       Mention[]
+  internalGroups InternalGroup[] @relation("MemberInternalGroups")
+}
+
+enum MentionStatus {
+  PENDING
+  NOTIFIED
+  REPLIED
+}
+
+model Mention {
+  id        Int           @id @default(autoincrement())
+  status    MentionStatus @default(PENDING)   // ✅ enum use karo yahan, string ki jagah
+  createdAt DateTime      @default(now())
+  repliedAt DateTime?
+
+  // relation to Member
+  memberId  Int
+  member    Member        @relation(fields: [memberId], references: [id])
+
+  // relation to Group
+  groupId   Int
+  group     Group         @relation(fields: [groupId], references: [id])
+}
+
+model InternalGroup {
+  id        BigInt   @id
+  name      String
+  createdAt DateTime @default(now())
+  members   Member[] @relation("MemberInternalGroups")
+}
