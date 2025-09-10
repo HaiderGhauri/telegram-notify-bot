@@ -40,7 +40,7 @@ const startNotifier = () => {
         for (const internalGroup of internalGroups) {
           await bot.telegram.sendMessage(
             internalGroup.id.toString(),
-            `⚠️ <b>@${mention.member.username}</b> you were mentioned in <b>${mention.group.name}</b> but did not reply in time.\n\nDid you reply?`,
+            `⚠️ <a href="tg://user?id=${mention.member.telegramId}">${mention.member.username}</a> you were mentioned in <b>${mention.group.name}</b> but did not reply in time.\n\nDid you reply?`,
             {
               parse_mode: "HTML",
               reply_markup: {

@@ -43,7 +43,10 @@ bot.command("register_group", async (ctx) => {
   });
 
   if (existingGroup) {
-    await ctx.reply(`ℹ️ This group (${chatTitle}) is already registered.`);
+    await ctx.reply(
+      `ℹ️ <b>This group "<i>${chatTitle}</i>"</b> is already registered.`,
+      { parse_mode: "HTML" }
+    );
     return;
   }
 
@@ -55,7 +58,10 @@ bot.command("register_group", async (ctx) => {
     },
   });
 
-  await ctx.reply(`✅ Group (${chatTitle}) registered successfully!`);
+  await ctx.reply(
+    `✅ <b>Group "<i>${chatTitle}</i>"</b> registered successfully!`,
+    { parse_mode: "HTML" }
+  );
   console.log(`Group registered: ${chatTitle} [${chat.id}] by owner.`);
 });
 // -----------------------------------------------------------------
@@ -101,7 +107,8 @@ bot.command("register_internal", async (ctx) => {
     });
 
     await ctx.reply(
-      `✅ Internal group '${chatTitle}' registered successfully!`
+      `✅ <b>Internal group '<i>${chatTitle}</i>'</b> registered successfully!`,
+      { parse_mode: "HTML" }
     );
   } catch (err) {
     console.error(err);
@@ -126,9 +133,7 @@ bot.command("add_member", async (ctx) => {
     });
 
     if (!internalGroup) {
-      await ctx.reply(
-        "⚠️ This group is not registered. Use /register-internal first."
-      );
+      await ctx.reply("⚠️ This group is not registered as internal.");
       return;
     }
 
@@ -208,13 +213,16 @@ bot.command("add_member", async (ctx) => {
 
     let replyMsg = "";
     if (addedUsers.length > 0)
-      replyMsg += `✅ Added: ${addedUsers.join(", ")}\n`;
+      replyMsg += `✅ <b>Added: <i>${addedUsers.join(", ")}</i></b>\n`;
     if (skippedUsers.length > 0)
-      replyMsg += `ℹ️ Already exists / skipped: ${skippedUsers.join(", ")}`;
+      replyMsg += `ℹ️ Already exists / skipped: <i>${skippedUsers.join(
+        ", "
+      )}</i>`;
 
     await ctx.reply(
       replyMsg.trim() ||
-        "⚠️ Please mention at least one user with @ in the command."
+        "⚠️ Please mention at least one user with @ in the command.",
+      { parse_mode: "HTML" } // parse_mode yahan pass karo
     );
   } catch (err) {
     console.error(err);
