@@ -8,20 +8,20 @@ datasource db {
 }
 
 model Group {
-  id         Int       @id @default(autoincrement())
-  telegramId BigInt    @unique
+  id         Int      @id @default(autoincrement())
+  telegramId BigInt   @unique
   name       String
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime @default(now())
 
-  mentions   Mention[]
+  mentions Mention[]
 }
 
 model Member {
-  id            Int            @id @default(autoincrement()) // internal DB PK
-  telegramId    BigInt?        @unique                      // optional, agar available ho
-  username      String?        @unique                      // optional, agar sirf @username mila
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id         Int      @id @default(autoincrement()) // internal DB PK
+  telegramId BigInt?  @unique // optional, agar available ho
+  username   String?  @unique // optional, agar sirf @username mila
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   mentions       Mention[]
   internalGroups InternalGroup[] @relation("MemberInternalGroups")
@@ -35,17 +35,17 @@ enum MentionStatus {
 
 model Mention {
   id        Int           @id @default(autoincrement())
-  status    MentionStatus @default(PENDING)   // ✅ enum use karo yahan, string ki jagah
+  status    MentionStatus @default(PENDING) // ✅ enum use karo yahan, string ki jagah
   createdAt DateTime      @default(now())
   repliedAt DateTime?
 
   // relation to Member
-  memberId  Int
-  member    Member        @relation(fields: [memberId], references: [id])
+  memberId Int
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // relation to Group
-  groupId   Int
-  group     Group         @relation(fields: [groupId], references: [id])
+  groupId Int
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model InternalGroup {

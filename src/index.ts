@@ -1,8 +1,8 @@
-import { bot } from "./bot.js";
-import { initNotifier } from "./services/notifier.js";
+// import { bot } from "./bot.js";
+// import { initNotifier } from "./services/notifier.js";
 
-bot.launch();
-console.log("Bot started ✅");
+// bot.launch();
+// console.log("Bot started ✅");
 
-// Start notifier
-initNotifier(bot);
+// // Start notifier
+// initNotifier(bot);

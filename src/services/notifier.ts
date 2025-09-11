@@ -36,18 +36,53 @@ const startNotifier = () => {
 
       const internalGroups = await prisma.internalGroup.findMany();
 
+      function renderMention(member: {
+        telegramId: bigint | null;
+        username: string | null;
+      }) {
+        if (member.telegramId) {
+          return `<a href="tg://user?id=${member.telegramId}">${
+            member.username || "User"
+          }</a>`;
+        } else if (member.username) {
+          // fallback: clickable but no notification
+          return `@${member.username}`;
+        } else {
+          return "Unknown User";
+        }
+      }
+
       for (const mention of pendingMentions) {
         for (const internalGroup of internalGroups) {
+          const mentionText = renderMention(mention.member);
+
+          let groupLink: string;
+          try {
+            groupLink = mention.group.name
+              ? `https://t.me/${mention.group.name}`
+              : await bot.telegram.exportChatInviteLink(
+                  mention.groupId.toString()
+                );
+          } catch {
+            groupLink = mention.group.name;
+          }
+
           await bot.telegram.sendMessage(
             internalGroup.id.toString(),
-            `⚠️ <a href="tg://user?id=${mention.member.telegramId}">${mention.member.username}</a> you were mentioned in <b>${mention.group.name}</b> but did not reply in time.\n\nDid you reply?`,
+            `⚠️ ${mentionText} you were mentioned in <a href="${groupLink}"><b>${mention.group.name}</b></a> but did not reply in time.\n\nDid you reply?`,
             {
               parse_mode: "HTML",
               reply_markup: {
                 inline_keyboard: [
                   [
-                    { text: "✅ Yes", callback_data: `mention_yes_${mention.id}` },
-                    { text: "❌ No", callback_data: `mention_no_${mention.id}` },
+                    {
+                      text: "✅ Yes",
+                      callback_data: `mention_yes_${mention.id}`,
+                    },
+                    {
+                      text: "❌ No",
+                      callback_data: `mention_no_${mention.id}`,
+                    },
                   ],
                 ],
               },
@@ -91,14 +126,19 @@ const setupActions = () => {
 
     // Only allow the mentioned member OR owner to confirm
     const isAuthorized =
-      (mention.member.telegramId !== null && clickerId === mention.member.telegramId) ||
-      (mention.member.username && clickerUsername === mention.member.username) ||
+      (mention.member.telegramId !== null &&
+        clickerId === mention.member.telegramId) ||
+      (mention.member.username &&
+        clickerUsername === mention.member.username) ||
       clickerId === OWNER_ID;
 
     if (!isAuthorized) {
-      await ctx.answerCbQuery("❌ You are not allowed to confirm this mention", {
-        show_alert: true,
-      });
+      await ctx.answerCbQuery(
+        "❌ You are not allowed to confirm this mention",
+        {
+          show_alert: true,
+        }
+      );
       return;
     }
 
@@ -129,12 +169,16 @@ const setupActions = () => {
     const clickerUsername = ctx.from.username;
 
     const isAuthorized =
-      (mention.member.telegramId !== null && clickerId === mention.member.telegramId) ||
-      (mention.member.username && clickerUsername === mention.member.username) ||
+      (mention.member.telegramId !== null &&
+        clickerId === mention.member.telegramId) ||
+      (mention.member.username &&
+        clickerUsername === mention.member.username) ||
       clickerId === OWNER_ID;
 
     if (!isAuthorized) {
-      await ctx.answerCbQuery("❌ You are not allowed to respond", { show_alert: true });
+      await ctx.answerCbQuery("❌ You are not allowed to respond", {
+        show_alert: true,
+      });
       return;
     }
 
@@ -142,6 +186,8 @@ const setupActions = () => {
     await ctx.answerCbQuery(
       "❌ Marked as not replied. You’ll be reminded again."
     );
-    await ctx.editMessageText("❌ You marked as not replied. Reminder will repeat.");
+    await ctx.editMessageText(
+      "❌ You marked as not replied. Reminder will repeat."
+    );
   });
 };
