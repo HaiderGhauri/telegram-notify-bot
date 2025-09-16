@@ -51,6 +51,7 @@ model Mention {
 model InternalGroup {
   id        BigInt   @id
   name      String
+  threadId  BigInt?       // ✅ optional thread/topic ID
   createdAt DateTime @default(now())
   members   Member[] @relation("MemberInternalGroups")
 }

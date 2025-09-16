@@ -38,10 +38,10 @@ export const registerGroupCommand = (bot: Telegraf<any>) => {
     },
   });
 
-  await ctx.reply(
-    `✅ <b>Group "<i>${chatTitle}</i>"</b> registered successfully!`,
-    { parse_mode: "HTML" }
-  );
+  // await ctx.reply(
+  //   `✅ <b>Group "<i>${chatTitle}</i>"</b> registered successfully!`,
+  //   { parse_mode: "HTML" }
+  // );
   console.log(`Group registered: ${chatTitle} [${chat.id}] by owner.`);
 });
 }

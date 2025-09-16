@@ -12,6 +12,6 @@ export const initCommand = (bot: Telegraf<any>) => {
     }
 
     await ctx.reply("✅ Bot started successfully. Owner verified!");
-    console.log(`Owner ${ctx.message.from.username} started the bot.`);
+    console.log(`Owner ${ctx.message.from.username || ctx.message.from.first_name} started the bot.`);
   });
 };

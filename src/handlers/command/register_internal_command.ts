@@ -22,9 +22,22 @@ export const registerInternalCommand = (bot: Telegraf<any>) => {
         return;
       }
 
+      // Decide threadId (only if forum group)
+      const isForum =
+        chat.type === "supergroup" &&
+        "is_forum" in chat &&
+        (chat as any).is_forum === true;
+
+      const threadId =
+        isForum && ctx.message.message_thread_id
+          ? BigInt(ctx.message.message_thread_id)
+          : null;
+
       // Check if internal group already exists
       const existing = await prisma.internalGroup.findUnique({
-        where: { id: BigInt(chat.id) },
+        where: {
+          id: BigInt(chat.id),
+        },
       });
 
       if (existing) {
@@ -39,11 +52,14 @@ export const registerInternalCommand = (bot: Telegraf<any>) => {
         data: {
           id: BigInt(chat.id),
           name: chatTitle,
+          threadId, // ✅ added
         },
       });
 
       await ctx.reply(
-        `✅ <b>Internal group '<i>${chatTitle}</i>'</b> registered successfully!`,
+        `✅ <b>Internal group '<i>${chatTitle}</i>'</b> registered successfully!${
+          threadId ? ` (Topic)` : ""
+        }`,
         { parse_mode: "HTML" }
       );
     } catch (err) {

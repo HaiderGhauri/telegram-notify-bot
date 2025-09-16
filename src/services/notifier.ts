@@ -18,13 +18,13 @@ const startNotifier = () => {
     try {
       // 1️⃣ Find all PENDING or NOTIFIED mentions older than 20 min
       const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
-      // Testing → 1 min
-      const oneMinuteAgo = new Date(Date.now() - 1 * 60 * 1000);
+      // Testing → 3 min
+      const threeMinuteAgo = new Date(Date.now() - 1 * 60 * 3000);
 
       const pendingMentions = await prisma.mention.findMany({
         where: {
           status: { in: ["PENDING", "NOTIFIED"] },
-          createdAt: { lte: oneMinuteAgo },
+          createdAt: { lte: threeMinuteAgo },
         },
         include: {
           member: true,
@@ -61,7 +61,7 @@ const startNotifier = () => {
             groupLink = mention.group.name
               ? `https://t.me/${mention.group.name}`
               : await bot.telegram.exportChatInviteLink(
-                  mention.groupId.toString()
+                  mention.group.telegramId.toString()
                 );
           } catch {
             groupLink = mention.group.name;
@@ -101,54 +101,86 @@ const startNotifier = () => {
     } catch (err) {
       console.error("Notifier error:", err);
     }
-  }, 60 * 1000); // every 1 minute
+  }, 60 * 3000); // every 1 minute
 };
 
 // 2️⃣ Setup actions for Yes/No clicks
 const setupActions = () => {
   // YES clicked → update to REPLIED
   bot.action(/^mention_yes_(\d+)$/, async (ctx) => {
-    const mentionId = Number(ctx.match[1]);
+    try {
+      const mentionId = Number(ctx.match[1]);
+      const mention = await prisma.mention.findUnique({
+        where: { id: mentionId },
+        include: { member: true, group: true },
+      });
 
-    // fetch the mention including member info
-    const mention = await prisma.mention.findUnique({
-      where: { id: mentionId },
-      include: { member: true },
-    });
+      if (!mention) {
+        return ctx.answerCbQuery("❌ Mention not found");
+      }
 
-    if (!mention) {
-      await ctx.answerCbQuery("❌ Mention not found");
-      return;
-    }
-
-    const clickerId = BigInt(ctx.from.id);
-    const clickerUsername = ctx.from.username;
-
-    // Only allow the mentioned member OR owner to confirm
-    const isAuthorized =
-      (mention.member.telegramId !== null &&
-        clickerId === mention.member.telegramId) ||
-      (mention.member.username &&
-        clickerUsername === mention.member.username) ||
-      clickerId === OWNER_ID;
-
-    if (!isAuthorized) {
-      await ctx.answerCbQuery(
-        "❌ You are not allowed to confirm this mention",
-        {
+      // 🔒 prevent double-processing
+      if (mention.status === "REPLIED") {
+        return ctx.answerCbQuery("✅ Already marked as replied", {
           show_alert: true,
+        });
+      }
+
+      const clickerId = BigInt(ctx.from.id);
+      const clickerUsername = ctx.from.username;
+
+      const isAuthorized =
+        (mention.member.telegramId !== null &&
+          clickerId === mention.member.telegramId) ||
+        (mention.member.username &&
+          clickerUsername === mention.member.username) ||
+        clickerId === OWNER_ID;
+
+      if (!isAuthorized) {
+        return ctx.answerCbQuery("❌ Not allowed", { show_alert: true });
+      }
+
+      // update DB
+      await prisma.mention.update({
+        where: { id: mentionId },
+        data: { status: "REPLIED" },
+      });
+
+      await ctx.answerCbQuery("✅ Marked as replied");
+
+      const memberText = mention.member.telegramId
+        ? `<a href="tg://user?id=${mention.member.telegramId}">${
+            mention.member.username || "User"
+          }</a>`
+        : mention.member.username
+        ? `@${mention.member.username}`
+        : "Unknown User";
+
+      const groupLink = mention.group.name
+        ? `https://t.me/${mention.group.name}`
+        : await bot.telegram.exportChatInviteLink(
+            mention.group.telegramId.toString()
+          );
+
+      // ✅ safe edit with try-catch
+      try {
+        await ctx.editMessageText(
+          `✅ ${memberText} confirmed they replied in <a href="${groupLink}"><b>${mention.group.name}</b></a>.`,
+          {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: [] },
+          }
+        );
+      } catch (err: any) {
+        if (err.description?.includes("message is not modified")) {
+          // ignore silently
+        } else {
+          throw err;
         }
-      );
-      return;
+      }
+    } catch (err) {
+      console.error("mention_yes error:", err);
     }
-
-    await prisma.mention.update({
-      where: { id: mentionId },
-      data: { status: "REPLIED" },
-    });
-
-    await ctx.answerCbQuery("✅ Status updated to REPLIED");
-    await ctx.editMessageText("✅ You confirmed you have replied.");
   });
 
   // NO clicked → keep as NOTIFIED, don’t change
@@ -186,8 +218,19 @@ const setupActions = () => {
     await ctx.answerCbQuery(
       "❌ Marked as not replied. You’ll be reminded again."
     );
-    await ctx.editMessageText(
-      "❌ You marked as not replied. Reminder will repeat."
-    );
+    try {
+      await ctx.editMessageText(
+        "❌ You marked as not replied. Reminder will repeat.",
+        {
+          reply_markup: { inline_keyboard: [] },
+        }
+      );
+    } catch (err: any) {
+      if (err.description?.includes("message is not modified")) {
+        // ignore silently
+      } else {
+        throw err;
+      }
+    }
   });
 };
